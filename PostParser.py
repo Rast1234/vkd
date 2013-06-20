@@ -3,14 +3,18 @@ __author__ = 'rast'
 import logging
 from os import path, makedirs
 import json
-from ThreadedDownload import ThreadedDownload
+from ThreadedDownload import ThreadedDownload  # buggy like hell
+from Api import call_api
+import sys
+from collections import defaultdict
 
 def make_dir(base_dir, name):
     """Make new dir into base dir, return concatenation"""
     if path.exists(base_dir) and path.isdir(base_dir):
         directory = path.join(base_dir, name)
         if path.exists(directory) and path.isdir(directory):
-            raise RuntimeError("Directory already exists: {}".format(directory))
+            #raise RuntimeError("Directory already exists: {}".format(directory))
+            return directory
         else:
             makedirs(directory)
             return directory
@@ -47,29 +51,29 @@ class PostParser(object):
             copy_text (if repost, user's response)
 
 """
-    def __new__(cls, *args, **kwargs):
-        """Singleton pattern"""
-        if not hasattr(cls, '_instance'):
-            cls._instance = super(PostParser, cls).__new__(cls, *args, **kwargs)
-        return cls._instance  # call __init__
 
-    def __init__(self, base_dir, user_id):
+    def __init__(self, base_dir, subdir, args):
         """Make directory for current user"""
-        self.directory = make_dir(base_dir, user_id)
+        self.directory = make_dir(base_dir, subdir)
+        self.args = args
 
-    def __call__(self, raw_data, json_stuff):
+    def __call__(self, tpl, raw_data, json_stuff):
         """Process whole post into directory"""
         keys = []
         funcs = []
         self.urls = []
+        self.prefix = tpl[0]
+        self.number = tpl[1]
         ignore = ['id', 'to_id', 'from_id', 'date',
                   'likes', 'reposts', 'signer_id',
                   'copy_owner_id', 'copy_post_id', 'copy_post_date',
                   'copy_post_type', 'reply_count', 'post_type',
                   'post_source', 'online', 'attachment', 'copy_text',
-                  'media'
+                  'media', 'can_edit',
+                  # comments fix
+                  'uid', 'cid', 'reply_to_cid', 'reply_to_uid',
+                  'reply_owner_id', 'reply_post_id',
                 ]
-        # WTF are online, attachment, post_type fields?
         for k in raw_data.keys():
             if k in ignore:
                 continue
@@ -88,15 +92,21 @@ class PostParser(object):
 
         #download urls in threads
         #args: urls=[], destination='.', directory_structure=False, thread_count=5, url_tries=3
-        downloader = ThreadedDownload(self.urls,
-                                      self.post_directory,
-                                      False,
-                                      8,
-                                      3
-        )
-
-        print 'Downloading %s files' % len(self.urls)
-        downloader.run()
+        print_str = "{:11}{:^5}: id={:^6}".format(self.prefix, self.number, raw_data['id'])
+        if self.urls and not self.args.no_download:
+            logging.info('\tDownloading %s files' % len(self.urls))
+            print_str += "/ Files: {:^3}".format(len(self.urls))
+            downloader = ThreadedDownload(self.urls,
+                                          self.post_directory,
+                                          self.args.verbose,
+                                          5,
+                                          3,
+                                          print_str
+            )
+            downloader.run()  # will print progress
+        else:
+            if self.args.verbose:
+                sys.stdout.write(print_str + "\n")
 
     def text(self, key, raw_data):
         """Save text of the note"""
@@ -123,16 +133,15 @@ class PostParser(object):
 
 
         f_name = path.join(self.post_directory, 'text.html')
-        out_file = open(f_name, 'w+')
+        out_file = open(f_name, 'a+')
         out_file.write(stuff.encode("utf-8"))
         out_file.close()
 
     def attachments(self, key, raw_data):
-        """Download and save all attachments"""
+        """Save all attachments"""
         f_args = []
         funcs = []
         for att in raw_data[key]:
-            logging.debug(str(att.keys()) + " => " + att['type'])
             t = att['type']
             k = 'dl_' + t
             try:
@@ -141,8 +150,35 @@ class PostParser(object):
                 funcs.append(f)
             except AttributeError:
                 logging.warning("Not implemented downloader: {}".format(t))
-        for (f, a) in zip (funcs, f_args):
+        for (f, a) in zip(funcs, f_args):
             f(a)
+
+    def comments(self, key, data):
+        """Save all comments"""
+        count = data[key]['count']
+        if count == 0:
+            return
+        comments = [count, ]
+        for x in xrange(data[key]['count']):
+            (comment_data, json_stuff) = call_api("wall.getComments",
+                                                [("owner_id", self.args.id),
+                                                    ("post_id", data["id"]),
+                                                    ("sort", "asc"),
+                                                    ("offset", x),
+                                                    ("count", 1),
+                                                    ("preview_length", 0),
+                                                    ("need_likes", 1),
+                                                    ("v", 4.4),
+                                                 ], self.args.token)
+            comments.append(comment_data[1])
+            cdata = defaultdict(lambda: '', comment_data[1])
+            pp = PostParser(self.post_directory, 'comments', self.args)
+            pp(('comment to ',self.number), cdata, json_stuff)
+        json_data = json.dumps(comments, indent=4, ensure_ascii=False)
+        f_name = path.join(self.post_directory, 'comments.json')
+        out_file = open(f_name, 'a+')
+        out_file.write(json_data.encode('utf-8'))
+        out_file.close()
 
     def save_raw(self, data):
         """Save raw post data"""
@@ -150,12 +186,12 @@ class PostParser(object):
         data = json.dumps(data, indent=4, ensure_ascii=False)
 
         f_name = path.join(self.post_directory, 'raw.json')
-        out_file = open(f_name, 'w+')
+        out_file = open(f_name, 'a+')
         out_file.write(data.encode('utf-8'))
         out_file.close()
 
-    def save_url(self, url):
-        self.urls.append(url)
+    def save_url(self, url, name=None):
+        self.urls.append((url, name))
         f_name = path.join(self.post_directory, 'media_urls.txt')
         out_file = open(f_name, 'a+')
         out_file.write(url)
@@ -174,7 +210,7 @@ class PostParser(object):
             (and what else?)
         """
         sizes = ['src_xxxbig', 'src_xxbig', 'src_xbig', 'src_big', 'src', 'src_small']
-        url  = None
+        url = None
         for s in sizes:
             try:
                 url = data[s]  # try to get biggest size
@@ -196,4 +232,65 @@ class PostParser(object):
         out_file.close()
 
     def dl_photos_list(self, data):
-        print data
+        """Download list of photos"""
+        for x in data:
+            self.dl_photo(x)
+
+    def dl_audio(self, data):
+        aid = data["aid"]
+        owner = data["owner_id"]
+        request = "{}_{}".format(owner, aid)
+        (audio_data, json_stuff) = call_api("audio.getById", [("audios", request), ], self.args.token)
+        data = audio_data[0]
+        name = u"{artist} - {title}".format(**data)
+        self.save_url(data["url"], name)
+
+        # store lyrics if any
+        try:
+            lid = data["lyrics_id"]
+        except KeyError:
+            return
+        (lyrics_data, json_stuff) = call_api("audio.getLyrics", [("lyrics_id", lid), ], self.args.token)
+        text = lyrics_data["text"].encode('utf-8')
+        f_name = path.join(self.post_directory, name+'.txt')
+        out_file = open(f_name, 'a+')
+        out_file.write(text)
+        out_file.write('\n')
+        out_file.close()
+
+
+    """Download video
+        Threr's a walkaround:
+        http://habrahabr.ru/sandbox/57173/
+        But this requires authorization as another app
+
+    def dl_video(self, data):
+
+        #print data
+    """
+
+
+    def dl_doc(self, data):
+        """Download document (GIFs, etc.)"""
+        url = data["url"]
+        self.save_url(url)
+
+    def dl_note(self, data):
+        """Download note, not comments"""
+        (note_data, json_stuff) = call_api("notes.getById", [
+            ("owner_id", data["owner_id"]),
+            ("nid", data["nid"]),
+            ], self.args.token)
+        stuff = u"<h1>{title}</h1>\n{text}".format(**note_data)
+        ndir = make_dir(self.post_directory, 'note_'+note_data["id"])
+        f_name = path.join(ndir, 'text.html')
+        out_file = open(f_name, 'a+')
+        out_file.write(stuff.encode("utf-8"))
+        out_file.close()
+
+        ndata = json.dumps(note_data, indent=4, ensure_ascii=False)
+
+        f_name = path.join(ndir, 'raw.json')
+        out_file = open(f_name, 'a+')
+        out_file.write(ndata.encode("utf-8"))
+        out_file.close()

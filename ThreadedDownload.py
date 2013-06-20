@@ -6,8 +6,9 @@ from Queue import Queue
 import sys
 import os
 import re
+import logging
 
-
+counter = 0
 class ThreadedDownload(object):
     """Taken from:
     https://gist.github.com/chandlerprall/1017266
@@ -23,12 +24,16 @@ class ThreadedDownload(object):
 
 
     class Downloader(threading.Thread):
-        def __init__(self, queue, report):
+        def __init__(self, queue, report, print_str, verbose):
             threading.Thread.__init__(self)
             self.queue = queue
             self.report = report
+            self.bak_str = print_str
+            self.print_str = print_str + "/ downloaded: {}"
+            self.verbose = verbose
 
         def run(self):
+            global counter
             while self.queue.empty() == False:
                 url = self.queue.get()
 
@@ -36,13 +41,32 @@ class ThreadedDownload(object):
                 if response == False and url.url_tried < url.url_tries:
                     self.queue.put(url)
                 elif response == False and url.url_tried == url.url_tries:
-                    print "Download failure: " + url.url
+                    logging.error("\tDownload failure: " + url.url)
                     self.report['failure'].append(url)
                 elif response == True:
-                    print "Download success: " + url.url
+                    logging.info("\tDownload success: " + url.url)
                     self.report['success'].append(url)
+                    # progress-bar magic
+                    counter += 1
+                    to_print = self.print_str.format(counter)
+
+                    if self.verbose:
+                        sys.stdout.write(to_print)
+
+                        # real magic!
+                        if sys.platform.lower().startswith('win'):
+                            sys.stdout.write('\r')
+                        else:
+                            sys.stdout.write(chr(27) + '[A')
 
                 self.queue.task_done()
+                if self.verbose:
+                    tmp = self.bak_str.strip()
+                    tmp = int(tmp[tmp.rindex(' '):])
+                    if counter == tmp:
+                        sys.stdout.write("\n\n")
+                    else:
+                        sys.stdout.write("\n")
 
 
     class URLTarget(object):
@@ -85,7 +109,7 @@ class ThreadedDownload(object):
                                                                     'error': self.error}
 
 
-    def __init__(self, urls=[], destination='.', directory_structure=False, thread_count=5, url_tries=3):
+    def __init__(self, urls=[], destination='.', verbose=False, thread_count=5, url_tries=3, print_str=""):
         if os.path.exists(destination) == False:
             raise ThreadedDownload.MissingDirectoryException('Destination folder does not exist.')
 
@@ -97,46 +121,36 @@ class ThreadedDownload(object):
             destination = destination + os.path.sep
         self.destination = destination
         self.thread_count = thread_count
-        self.directory_structure = directory_structure
+        self.print_str = print_str
+        self.verbose = verbose
 
         # Prepopulate queue with any values we were given
-        for url in urls:
-            self.queue.put(ThreadedDownload.URLTarget(url, self.fileDestination(url), url_tries))
+        for t in urls:
+            url = t[0]
+            name = t[1]
+            self.queue.put(ThreadedDownload.URLTarget(url, self.fileDestination(url, name), url_tries))
 
 
-    def fileDestination(self, url):
-        if self.directory_structure == False:
-            # No directory structure, just filenames
-            file_destination = '%s%s' % (self.destination, os.path.basename(url))
-
-        elif self.directory_structure == True:
-            # Strip off hostname, keep all other directories
-            file_destination = '%s%s' % (self.destination, ThreadedDownload.REGEX['hostname_strip'].sub('', url))
-
-        elif hasattr(self.directory_structure, '__len__') and len(self.directory_structure) == 2:
-            # User supplied a custom regex replace
-            regex = self.directory_structure[0]
-            if isinstance(regex, str):
-                regex = re.compile(str)
-            replace = self.directory_structure[1]
-            file_destination = '%s%s' % (self.destination, regex.sub(replace, url))
-
+    def fileDestination(self, url, desired_name=None):
+        if desired_name is None:
+            # no filename, use URL
+            name = url
         else:
-            # No idea what's wanted
-            file_destination = None
-
-        if hasattr(file_destination, 'replace'):
-            file_destination = file_destination.replace('/', os.path.sep)
+            name = desired_name
+        file_destination = '%s%s' % (self.destination, os.path.basename(name))
         return file_destination
 
 
     def addTarget(self, url, url_tries=3):
-        self.queue.put(ThreadedDownload.URLTarget(url, self.fileDestination(url), url_tries))
+        self.queue.put(ThreadedDownload.URLTarget(url, self.fileDestination(url[0], url[1]), url_tries))
 
 
     def run(self):
+        global counter
+        counter = 0
+        #sys.stdout.write(self.print_str.format(counter))
         for i in range(self.thread_count):
-            thread = ThreadedDownload.Downloader(self.queue, self.report)
+            thread = ThreadedDownload.Downloader(self.queue, self.report, self.print_str, self.verbose)
             thread.start()
             self.threads.append(thread)
         if self.queue.qsize() > 0:
