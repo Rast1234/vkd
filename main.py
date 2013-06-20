@@ -123,7 +123,7 @@ def process_audio(number, audio_data, post_parser, json_stuff):
     data = {'attachments': [{'type': 'audio',
                             'audio': audio_data[0],
                             }],
-            'id' : ''
+            'id' : 'audio'
             }
 
     post_parser(number, data, json_stuff)
@@ -137,7 +137,7 @@ def ranges(start, end, count):
         raise RuntimeError("Start argument not in valid range")
     if not start <= end <= count:
         raise RuntimeError("End argument not in valid range")
-    logging.info("Parsing posts from {} to {}".format(start, end))
+    logging.info("Working range: from {} to {}".format(start, end))
     total = end - start
     return start, end, total
 
@@ -161,13 +161,13 @@ def main():
         counter = 0.0  # float for %
         post_parser = PostParser(args.directory, str(args.id), args)
         for x in xrange(args.wall_start, args.wall_end):
-            if args.verbose and x % 50 == 0:
-                print("Done: {:.2%} ({})".format(counter / total, int(counter)))
+            if args.verbose and x % 10 == 0:
+                print("\nDone: {:.2%} ({})".format(counter / total, int(counter)))
             (post, json_stuff) = call_api("wall.get", [("owner_id", args.id), ("count", 1), ("offset", x)], args.token)
             process_post(("wall post", x), post, post_parser, json_stuff)
             counter += 1
         if args.verbose:
-            print("Done: {:.2%} ({})".format(float(total) / total, int(total)))
+            print("\nDone: {:.2%} ({})".format(float(total) / total, int(total)))
 
     if 'audio' in args.mode:
         #determine audio count
@@ -177,18 +177,19 @@ def main():
 
         args.audio_start, args.audio_end, total = ranges(args.audio_start, args.audio_end, count)
         counter = 0.0  # float for %
-        audio_dir = os.path.join(str(args.id), 'audio')
+        #audio_dir = os.path.join(str(args.id), 'audio')
+        audio_dir = str(args.id)
         post_parser = PostParser(args.directory, audio_dir, args)
         id_param = "uid" if args.id > 0 else "gid"
         args.id *= -1 if args.id < 0 else 1
         for x in xrange(args.audio_start, args.audio_end):
             if args.verbose and x % 50 == 0:
-                print("Done: {:.2%} ({})".format(counter / total, int(counter)))
+                print("\nDone: {:.2%} ({})".format(counter / total, int(counter)))
             (audio, json_stuff) = call_api("audio.get", [(id_param, args.id), ("count", 1), ("offset", x)], args.token)
             process_audio(("audiotrack", x), audio, post_parser, json_stuff)
             counter += 1
         if args.verbose:
-            print("Done: {:.2%} ({})".format(float(total) / total, int(total)))
+            print("\nDone: {:.2%} ({})".format(float(total) / total, int(total)))
 
     if 'video' in args.mode:
         raise NotImplementedError("Video mode is not written yet, sorry :(")
@@ -196,7 +197,7 @@ def main():
         raise NotImplementedError("Notes mode is not written yet, sorry :(")
 
 if __name__ == '__main__':
-    logging.basicConfig(format=u"""%(filename).6s : %(lineno)4d #%(levelname).8s [%(asctime)s] %(message)s""",
+    logging.basicConfig(format=u"""%(filename).6s : %(lineno)4d #%(levelname)8s [%(asctime)s] %(message)s""",
                             level=logging.DEBUG,
                             filename=u'report.log')
     ok = False

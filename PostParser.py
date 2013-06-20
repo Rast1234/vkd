@@ -3,7 +3,8 @@ __author__ = 'rast'
 import logging
 from os import path, makedirs
 import json
-from ThreadedDownload import ThreadedDownload  # buggy like hell
+#from ThreadedDownload import ThreadedDownload  # buggy like hell
+from Download import download
 from Api import call_api
 import sys
 from collections import defaultdict
@@ -83,30 +84,17 @@ class PostParser(object):
                 funcs.append(f)
             except AttributeError:
                 logging.warning("Not implemented: {}".format(k))
-        logging.info("Saving: {} for post {}".format(', '.join(keys), raw_data['id']))
+        logging.info("Saving: {} for {}".format(', '.join(keys), raw_data['id']))
         self.post_directory = make_dir(self.directory, str(raw_data['id']))
 
         self.save_raw(json_stuff)
         for (f, k) in zip(funcs, keys):
             f(k, raw_data)
 
-        #download urls in threads
-        #args: urls=[], destination='.', directory_structure=False, thread_count=5, url_tries=3
-        print_str = "{:11}{:^5}: id={:^6}".format(self.prefix, self.number, raw_data['id'])
         if self.urls and not self.args.no_download:
-            logging.info('\tDownloading %s files' % len(self.urls))
-            print_str += "/ Files: {:^3}".format(len(self.urls))
-            downloader = ThreadedDownload(self.urls,
-                                          self.post_directory,
-                                          self.args.verbose,
-                                          5,
-                                          3,
-                                          print_str
+            download(self.urls,
+                      self.post_directory,
             )
-            downloader.run()  # will print progress
-        else:
-            if self.args.verbose:
-                sys.stdout.write(print_str + "\n")
 
     def text(self, key, raw_data):
         """Save text of the note"""
@@ -190,8 +178,8 @@ class PostParser(object):
         out_file.write(data.encode('utf-8'))
         out_file.close()
 
-    def save_url(self, url, name=None):
-        self.urls.append((url, name))
+    def save_url(self, url, name=None, subdir=''):
+        self.urls.append((url, name, subdir))
         f_name = path.join(self.post_directory, 'media_urls.txt')
         out_file = open(f_name, 'a+')
         out_file.write(url)
@@ -242,7 +230,7 @@ class PostParser(object):
         request = "{}_{}".format(owner, aid)
         (audio_data, json_stuff) = call_api("audio.getById", [("audios", request), ], self.args.token)
         data = audio_data[0]
-        name = u"{artist} - {title}".format(**data)
+        name = u"{artist} - {title}.mp3".format(**data)
         self.save_url(data["url"], name)
 
         # store lyrics if any
@@ -273,7 +261,8 @@ class PostParser(object):
     def dl_doc(self, data):
         """Download document (GIFs, etc.)"""
         url = data["url"]
-        self.save_url(url)
+        name = data["title"]
+        self.save_url(url, name)
 
     def dl_note(self, data):
         """Download note, not comments"""
