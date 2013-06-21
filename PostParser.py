@@ -26,7 +26,7 @@ def escape(name):
     """Escape the filename"""
     result =  unicode(re.sub('[^+=\-()$!#%&,.\w\s]', '_', name, flags=re.UNICODE).strip())
     #print("\t{}\n\t{}".format(name, result))
-    return result
+    return result[:100]
 
 class PostParser(object):
     """Parses given post into data lists (text, music, photos, info, etc.)
