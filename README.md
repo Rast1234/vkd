@@ -62,20 +62,42 @@ You may set limits of posts and audio tracks to download, change directory to st
 
 Results
 ---
+According to working mode and wall posts' contents, corresponding dirs and files will be created.
 Everything will be stored in specified directory, say, `some_dir`:
    
       some_dir                                     (base directory)
-      +---- id                                     (user id)
+      +---- 9876543                                (user id)
             +---- docs                             (documents stored here)
             |     +---- cat.gif
             |     +---- my_archive.zip
+            |     +---- ...
             +---- audio                            (audio tracks ant dexts)
             |     +---- Artist1 - Track.mp3
             |     +---- Artist2 - Track.mp3
             |     +---- Artist2 - Track.mp3.txt    (text for that song)
-            +---- post_id                          (wall post id)
-                  +---- text.html                  (post text, if any)
-                  +---- image.jpg                  (any multimedia attachments)
+            |     +---- ...
+            +---- post_1234                        (wall post id)
+            |     +---- text.html                  (post text)
+            |     +---- image.jpg                  (any multimedia attachments)
+            |     +---- music.mp3                  
+            |     +---- ...
+            |     +---- media_urls.txt             (list of attachments' urls)
+            |     +---- comments.json              (raw comments, reply from vk server)
+            |     +---- raw.json                   (raw post, reply from vk server)
+            |     +---- note_1234                  (note, if attached to post)
+            |           +---- text.html            (note text)
+            |           +---- raw.json             (raw note, reply from vk server)
+            |     +---- comments                   (comments dir)
+            |           +---- text.html            (all comments' text)
+            |           +---- raw.json             (raw comments, reply from vk server)
+            |           +---- image.jpg            (any multimedia attachments)
+            |           +---- music.mp3                  
+            |           +---- ...
+            |           +---- media_urls.txt       (list of attachments' urls)
+            +---- post_1235
+            |     +---- ...
+            +---- ...
+                        
 
 
 Bugs
