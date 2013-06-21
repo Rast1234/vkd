@@ -29,7 +29,8 @@ VK dumper - save stuff from your vk.com to local drive
 * Tested on a particular user, not tested on a group
 * Can't grant access by itself, so you need to enter auth token manually (see below)
 * Not tested on Windows
-* If wall or audio list has been modified during work, it **will** cause unpredictable things.
+* If wall, documents or audio list has been modified during work, it **will** cause unpredictable things.
+* Sometimes you need to solve CAPTCHA (interactively)
 
 Usage and requirements
 ---
