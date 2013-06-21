@@ -163,7 +163,7 @@ class PostParser(object):
                                                     ("preview_length", 0),
                                                     ("need_likes", 1),
                                                     ("v", 4.4),
-                                                 ], self.args.token)
+                                                 ], self.args)
             comments.append(comment_data[1])
             cdata = defaultdict(lambda: '', comment_data[1])
             pp = PostParser(self.post_directory, 'comments', self.args)
@@ -236,7 +236,7 @@ class PostParser(object):
         aid = data["aid"]
         owner = data["owner_id"]
         request = "{}_{}".format(owner, aid)
-        (audio_data, json_stuff) = call_api("audio.getById", [("audios", request), ], self.args.token)
+        (audio_data, json_stuff) = call_api("audio.getById", [("audios", request), ], self.args)
         try:
             data = audio_data[0]
             name = u"{artist} - {title}.mp3".format(**data)
@@ -251,7 +251,7 @@ class PostParser(object):
             lid = data["lyrics_id"]
         except KeyError:
             return
-        (lyrics_data, json_stuff) = call_api("audio.getLyrics", [("lyrics_id", lid), ], self.args.token)
+        (lyrics_data, json_stuff) = call_api("audio.getLyrics", [("lyrics_id", lid), ], self.args)
         text = lyrics_data["text"].encode('utf-8')
         name = escape(name)
         f_name = path.join(self.post_directory, name+'.txt')
@@ -277,6 +277,8 @@ class PostParser(object):
         """Download document (GIFs, etc.)"""
         url = data["url"]
         name = data["title"]
+        name, ext = path.splitext(name)
+        name = name + '.' + data["ext"]
         self.save_url(url, name)
 
     def dl_note(self, data):
@@ -284,7 +286,7 @@ class PostParser(object):
         (note_data, json_stuff) = call_api("notes.getById", [
             ("owner_id", data["owner_id"]),
             ("nid", data["nid"]),
-            ], self.args.token)
+            ], self.args)
         stuff = u"<h1>{title}</h1>\n{text}".format(**note_data)
         ndir = make_dir(self.post_directory, 'note_'+note_data["id"])
         f_name = path.join(ndir, 'text.html')
