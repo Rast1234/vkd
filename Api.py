@@ -5,9 +5,7 @@ import urllib2
 from urllib import urlencode
 import re
 from time import sleep
-
-_counter = 0
-_max_calls = 5
+import logging
 
 def auth(args, access_rights):
     """Interact with user to get access_token"""
@@ -25,12 +23,6 @@ def auth(args, access_rights):
         return None
 
 def call_api(method, params, token):
-    global _counter
-    if _counter == _max_calls:
-        sleep(1)
-        _counter = 0
-    else:
-        _counter += 1
     if isinstance(params, list):
         params_list = [kv for kv in params]
     elif isinstance(params, dict):
@@ -39,13 +31,27 @@ def call_api(method, params, token):
         params_list = [params]
     params_list.append(("access_token", token))
     url = "https://api.vk.com/method/%s?%s" % (method, urlencode(params_list))
-    json_stuff = urllib2.urlopen(url).read()
-    result = json.loads(json_stuff)
-    if u'error' in result.keys():
-        raise RuntimeError("API call resulted in error ({}): {}".format(result[u'error'][u'error_code'],
-                                                                        result[u'error'][u'error_msg']))
+    while True:
+        json_stuff = urllib2.urlopen(url).read()
+        result = json.loads(json_stuff)
+        if u'error' in result.keys():
+            if result[u'error'][u'error_code'] == 6:  # too many requests
+                logging.debug("Too many requests per second, sleeping..")
+                sleep(1)
+                continue
+            else:
+                msg = "API call resulted in error ({}): {}".format(result[u'error'][u'error_code'],
+                                                                   result[u'error'][u'error_msg'])
+                logging.error(msg)
+                raise RuntimeError(msg)
+        else:
+            logging.debug("API call succeeded: {}".format(url))
+            break
 
     if not u'response' in result.keys():
-        raise RuntimeError("API call result has no response")
+        msg = "API call result has no response"
+        logging.error(msg)
+        raise RuntimeError(msg)
     else:
-        return (result[u'response'], json_stuff)
+        #logging.debug("API call answer: {}".format(str(result[u'response'])))
+        return result[u'response'], json_stuff
