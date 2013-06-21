@@ -229,9 +229,14 @@ class PostParser(object):
         owner = data["owner_id"]
         request = "{}_{}".format(owner, aid)
         (audio_data, json_stuff) = call_api("audio.getById", [("audios", request), ], self.args.token)
-        data = audio_data[0]
-        name = u"{artist} - {title}.mp3".format(**data)
-        self.save_url(data["url"], name)
+        try:
+            data = audio_data[0]
+            name = u"{artist} - {title}.mp3".format(**data)
+            self.save_url(data["url"], name)
+        except IndexError: # deleted :(
+            logging.warning("Deleted track: {}".format(str(data)))
+            return
+
 
         # store lyrics if any
         try:
@@ -248,7 +253,7 @@ class PostParser(object):
 
 
     """Download video
-        Threr's a walkaround:
+        There's a walkaround:
         http://habrahabr.ru/sandbox/57173/
         But this requires authorization as another app
 
