@@ -1,7 +1,7 @@
 vkd (en)
 ===
 
-VK dumper - save stuff your vk.com to local drive
+VK dumper - save stuff from your vk.com to local drive
 ---
 
 **Features:**
@@ -59,13 +59,13 @@ You may set limits of posts and audio tracks to download, change directory to st
 
 Bugs
 ---
-Any bug reports, pul requests appreciated. Open an issue here or [PM me](https://vk.com/rast1234)
+Any bug reports, pul requests appreciated. Open an issue [here](https://github.com/Rast1234/vkd/issues) or [PM me](https://vk.com/rast1234)
 
 Credits:
 ---
 
 Me :)  
 http://habrahabr.ru/post/143972/ (call_api function)  
-http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python  
+http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python (fancy progressbar)  
 Pavel Durov for great social network and its buggy API :)  
     
