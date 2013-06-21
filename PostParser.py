@@ -24,7 +24,9 @@ def make_dir(base_dir, name):
 
 def escape(name):
     """Escape the filename"""
-    return unicode(re.sub('[^\+\=\-\(\)\$\!\#\%\&\,\.\w\s]', '_', name, flags=re.UNICODE).strip())
+    result =  unicode(re.sub('[^+=\-()$!#%&,.\w\s]', '_', name, flags=re.UNICODE).strip())
+    #print("\t{}\n\t{}".format(name, result))
+    return result
 
 class PostParser(object):
     """Parses given post into data lists (text, music, photos, info, etc.)
@@ -251,6 +253,7 @@ class PostParser(object):
             return
         (lyrics_data, json_stuff) = call_api("audio.getLyrics", [("lyrics_id", lid), ], self.args.token)
         text = lyrics_data["text"].encode('utf-8')
+        name = escape(name)
         f_name = path.join(self.post_directory, name+'.txt')
         # escape!
         out_file = open(f_name, 'a+')
