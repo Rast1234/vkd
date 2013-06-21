@@ -184,7 +184,7 @@ def main():
         (response, json_stuff) = call_api("wall.get", [("owner_id", args.id), ("count", 1), ("offset", 0)], args)
         count = response[0]
         logging.info("Total posts: {}".format(count))
-
+        print("Wall dowload start")
         args.wall_start, args.wall_end, total = ranges(args.wall_start, args.wall_end, count)
         counter = 0.0  # float for %
         post_parser = PostParser(args.directory, str(args.id), args)
@@ -202,7 +202,7 @@ def main():
         (response, json_stuff) = call_api("audio.getCount", [("oid", args.id)], args)
         count = response
         logging.info("Total audio tracks: {}".format(count))
-
+        print("Audio dowload start")
         args.audio_start, args.audio_end, total = ranges(args.audio_start, args.audio_end, count)
         counter = 0.0  # float for %
         #audio_dir = os.path.join(str(args.id), 'audio')
@@ -229,7 +229,7 @@ def main():
         count = response[0]
         data = response[1:]
         logging.info("Total documents: {}".format(count))
-
+        print("Wall dowload start")
         args.docs_start, args.docs_end, total = ranges(args.docs_start, args.docs_end, count)
         counter = 0.0  # float for %
         docs_dir = str(args.id)
@@ -255,6 +255,7 @@ if __name__ == '__main__':
         main()
         logging.info("End")
         ok = True
+        print("")
     except KeyboardInterrupt:
         logging.critical("Interrupted by keystroke")
         print "\nWhy, cruel world?.."
