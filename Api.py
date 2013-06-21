@@ -22,16 +22,27 @@ def auth(args):
     else:
         return None
 
+def captcha(data):
+    """Ask user to solve captcha"""
+    logging.debug("Captcha needed..")
+    print("VK thinks you're a bot - and you are ;)")
+    print("They want you to solve CAPTCHA. Please open this URL, and type here a captcha solution:")
+    print("\n\t{}\n".format(data[u'error'][u'captcha_img']))
+    solution = raw_input("Solution = ").strip()
+    return data[u'error'][u'captcha_sid'], solution
+
+
 def call_api(method, params, args):
-    if isinstance(params, list):
-        params_list = [kv for kv in params]
-    elif isinstance(params, dict):
-        params_list = params.items()
-    else:
-        params_list = [params]
-    params_list.append(("access_token", args.token))
-    url = "https://api.vk.com/method/%s?%s" % (method, urlencode(params_list))
     while True:
+        if isinstance(params, list):
+            params_list = [kv for kv in params]
+        elif isinstance(params, dict):
+            params_list = params.items()
+        else:
+            params_list = [params]
+        params_list.append(("access_token", args.token))
+        url = "https://api.vk.com/method/%s?%s" % (method, urlencode(params_list))
+
         json_stuff = urllib2.urlopen(url).read()
         result = json.loads(json_stuff)
         if u'error' in result.keys():
@@ -39,12 +50,9 @@ def call_api(method, params, args):
                 logging.debug("Too many requests per second, sleeping..")
                 sleep(1)
                 continue
-            elif result[u'error'][u'error_code'] == 14:  # captcha needed :)
-                logging.debug("Captcha needed, asking for new token..")
-                print("VK thinks you're a bot - and you are ;)")
-                print("They want you to input CAPTCHA. Let's ignore them and \
-                      generate new access token!")
-                args.token = auth(args)
+            elif result[u'error'][u'error_code'] == 14:  # captcha needed :\
+                sid, key = captcha(result)
+                params.extend([(u"captcha_sid", sid), (u"captcha_key", key)])
                 continue
             else:
                 msg = "API call resulted in error ({}): {}".format(result[u'error'][u'error_code'],
