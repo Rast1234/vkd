@@ -6,8 +6,8 @@ import json
 #from ThreadedDownload import ThreadedDownload  # buggy like hell
 from Download import download
 from Api import call_api
-import sys
 from collections import defaultdict
+import re
 
 def make_dir(base_dir, name):
     """Make new dir into base dir, return concatenation"""
@@ -21,6 +21,10 @@ def make_dir(base_dir, name):
             return directory
     else:
         raise RuntimeError("Directory does not exist: {}".format(base_dir))
+
+def escape(name):
+    """Escape the filename"""
+    return unicode(re.sub('[^\+\=\-\(\)\$\!\#\%\&\,\.\w\s]', '_', name, flags=re.UNICODE).strip())
 
 class PostParser(object):
     """Parses given post into data lists (text, music, photos, info, etc.)
@@ -179,6 +183,8 @@ class PostParser(object):
         out_file.close()
 
     def save_url(self, url, name=None, subdir=''):
+        if name is not None:
+            name = escape(name)
         self.urls.append((url, name, subdir))
         f_name = path.join(self.post_directory, 'media_urls.txt')
         out_file = open(f_name, 'a+')
@@ -246,6 +252,7 @@ class PostParser(object):
         (lyrics_data, json_stuff) = call_api("audio.getLyrics", [("lyrics_id", lid), ], self.args.token)
         text = lyrics_data["text"].encode('utf-8')
         f_name = path.join(self.post_directory, name+'.txt')
+        # escape!
         out_file = open(f_name, 'a+')
         out_file.write(text)
         out_file.write('\n')

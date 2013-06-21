@@ -166,7 +166,7 @@ def main():
         counter = 0.0  # float for %
         post_parser = PostParser(args.directory, str(args.id), args)
         for x in xrange(args.wall_start, args.wall_end):
-            if args.verbose and counter % 50 == 0:
+            if args.verbose and counter % 10 == 0:
                 print("\nDone: {:.2%} ({})".format(counter / total, int(counter)))
             (post, json_stuff) = call_api("wall.get", [("owner_id", args.id), ("count", 1), ("offset", x)], args.token)
             process_post(("wall post", x), post, post_parser, json_stuff)
@@ -188,7 +188,7 @@ def main():
         id_param = "uid" if args.id > 0 else "gid"
         args.id *= -1 if args.id < 0 else 1
         for x in xrange(args.audio_start, args.audio_end):
-            if args.verbose and counter % 50 == 0:
+            if args.verbose and counter % 10 == 0:
                 print("\nDone: {:.2%} ({})".format(counter / total, int(counter)))
             (audio, json_stuff) = call_api("audio.get", [(id_param, args.id), ("count", 1), ("offset", x)], args.token)
             process_audio(("audiotrack", x), audio, post_parser, json_stuff)
