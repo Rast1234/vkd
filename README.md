@@ -56,6 +56,10 @@ How-to
 
 You may set limits of posts and audio tracks to download, change directory to store data, etc. See `--help` output.
 
+Bugs
+---
+Any bug reports, pul requests appreciated. Open an issue here or [PM me](https://vk.com/rast1234)
+
 Credits:
 ---
 
