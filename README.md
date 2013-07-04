@@ -15,7 +15,7 @@ VK dumper - save stuff from your vk.com to local drive
 * Download audio tracks
     * Correct fime naming
     * Text stored also (if available)
-    * **TODO:** sort by playlists
+    * Sort by playlists (as subfolders)
 * Download docs
     * Auto-change filename if exists
     * Write correct extension
@@ -24,11 +24,10 @@ VK dumper - save stuff from your vk.com to local drive
 
 **Known limitations, bugs and other considerations:**
 
-* Unable to download videos (Someone need this?)
+* Unable to download videos (Anyone need this?)
 * Unable to download note comments (Maybe an unneeded feature?)
-* Tested on a particular user, not tested on a group
+* Tested on a particular user, audio tested on a group
 * Can't grant access by itself, so you need to enter auth token manually (see below)
-* Not tested on Windows
 * If wall, documents or audio list has been modified during work, it **will** cause unpredictable things.
 * Sometimes you need to solve CAPTCHA (interactively)
 
@@ -76,6 +75,8 @@ Everything will be stored in specified directory, say, `some_dir`:
             |     +---- Artist1 - Track.mp3
             |     +---- Artist2 - Track.mp3
             |     +---- Artist2 - Track.mp3.txt    (text for that song)
+			|     +---- Album1                     (audio album name)
+            |     |     +---- Artist - track.mp3   (tracks in that album)
             |     +---- ...
             +---- post_1234                        (wall post id)
             |     +---- text.html                  (post text)
