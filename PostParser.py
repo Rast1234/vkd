@@ -28,32 +28,6 @@ def escape(name):
     #print("\t{}\n\t{}".format(name, result))
     return result[:250]
 
-def get_album_name(*args):
-    """Try to find and cache album name"""
-    names = {}
-    def inner_function(owner, album, args):
-        """Wrapped get_album_name function"""
-        key = "{}_{}".format(str(owner), str(album))
-        try:
-            return names[key]
-        except KeyError:
-            #get all albums once
-            print("Building album index...")
-            (data, json_stuff) = call_api("audio.getAlbums", [("owner_id", owner), ("offset", 0), ("count", 1)], args)
-            count = data[0]
-            for x in xrange(count):
-                (data, json_stuff) = call_api("audio.getAlbums", [("owner_id", owner), ("offset", x), ("count", 1)], args)
-                oid = data[1][u'owner_id']
-                aid = data[1][u'album_id']
-                val = data[1]['title']
-                tmp_key = "{}_{}".format(oid, aid)
-                names[tmp_key] = val
-                logging.info(u"Found album: owner={}  id={}    name={}".format(oid, aid, val))
-            print("Album index OK, count: {}".format(count))
-            return names[key]
-    return inner_function
-get_album_name = get_album_name()  # boo!
-    
 
 class PostParser(object):
     """Parses given post into data lists (text, music, photos, info, etc.)
@@ -265,15 +239,15 @@ class PostParser(object):
         owner = data["owner_id"]
         request = "{}_{}".format(owner, aid)
         (audio_data, json_stuff) = call_api("audio.getById", [("audios", request), ], self.args)
-        album = ''
+        album = 'no_album'
         try:
             data = audio_data[0]
             artist = data['artist'][:100]
             title= data['title'][:100]
             name = u"{} - {}.mp3".format(artist, title)
-            album = data['album']
-            album = get_album_name(owner, album, self.args)
-            album = escape(album)
+            #album = data['album']  # API changed, no time to fix
+            #album = get_album_name(owner, album, self.args)
+            #album = escape(album)
             make_dir(self.post_directory, album)
             self.save_url(data["url"], name, album)
         except IndexError: # deleted :(
