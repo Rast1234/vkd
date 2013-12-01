@@ -27,7 +27,7 @@ def download(urllist, root_dir):
         f = open(fname, 'wb')
         meta = u.info()
         file_size = int(meta.getheaders("Content-Length")[0])
-        sys.stdout.write("Downloading: %s (%s kb)\n" % (fname, file_size/1024))
+        sys.stdout.write("Downloading: %s (%s kb)\n" % (fname.encode('ascii', 'ignore'), file_size/1024))
 
         file_size_dl = 0
         block_sz = 8192
