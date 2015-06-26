@@ -1,0 +1,34 @@
+{
+    "saveTo": ".",
+    "ids": [10258363],
+    "appId": 3713087,
+    "simulate": false,
+    "verbose": true,
+    "targets": {
+      "wall": {
+        "download": true,
+        "start": 0,
+        "end": 42
+      },
+      "audio": {
+        "download": false,
+        "start": 0,
+        "end": -1
+      },
+      "video": {
+        "download": false,
+        "start": 0,
+        "end": -1
+      },
+      "notes": {
+        "download": false,
+        "start": 0,
+        "end": -1
+      },
+      "docs": {
+        "download": false,
+        "start": 0,
+        "end": -1
+      }
+    }
+}
