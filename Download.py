@@ -1,5 +1,6 @@
 __author__ = 'rast'
 
+import urllib2
 from os.path import join, exists, isfile, splitext
 import sys
 import logging

@@ -1,212 +1,72 @@
-# -*- coding: utf-8 -*-
-
 __author__ = 'rast'
 
 import json
+import urllib2
+from urllib import urlencode
 import re
 from time import sleep
 import logging
-import requests
-import datetime
-from pprint import pprint
-from DataObjects import *
 
-"""Vk.com API wrapper"""
-class Api:
+def auth(args):
+    """Interact with user to get access_token"""
 
-    apiVersion = 5.34  # actual as of 25.06.2015
+    url = "https://oauth.vk.com/oauth/authorize?" + \
+          "redirect_uri=https://oauth.vk.com/blank.html&response_type=token&" + \
+          "client_id=%s&scope=%s&display=wap" % (args.app_id, ",".join(args.access_rights))
 
-    urlTemplate = 'https://api.vk.com/method/{}'
+    print("Please open this url:\n\n\t{}\n".format(url))
+    raw_url = raw_input("Grant access to your acc and copy resulting URL here: ")
+    res = re.search('access_token=([0-9A-Fa-f]+)', raw_url, re.I)
+    if res is not None:
+        return res.groups()[0]
+    else:
+        return None
 
-    authUrlTemplate = "https://oauth.vk.com/oauth/authorize" \
-              "?redirect_uri=https://oauth.vk.com/blank.html" \
-              "&response_type=token" \
-              "&client_id={}" \
-              "&scope={}" \
-              "&display=wap"
-
-    authPermissions = ["wall", "audio", "friends", "notes", "video", "docs"]
-
-    def __init__(self, appId, id, maxAttempts=5, token=None):
-        self.appId = appId
-        self.id = id
-        self.maxAttempts = maxAttempts
-        self._set_token(token)
-        logging.debug("Api client created for id {}".format(self.id))
-
-    def _set_token(self, token=None):
-        logging.debug("Getting token...")
-        self.token = token if token else self._auth(self.appId)
-        if not self.token:
-            raise RuntimeError("Access token not found, can not proceed")
+def captcha(data):
+    """Ask user to solve captcha"""
+    logging.debug("Captcha needed..")
+    print("VK thinks you're a bot - and you are ;)")
+    print("They want you to solve CAPTCHA. Please open this URL, and type here a captcha solution:")
+    print("\n\t{}\n".format(data[u'error'][u'captcha_img']))
+    solution = raw_input("Solution = ").strip()
+    return data[u'error'][u'captcha_sid'], solution
 
 
-    def call_api(self, method, params):
-        """
-        This method does not raise errors, just returns None in case of error.
-        """
-        logging.debug('Calling api method {}, params={}'.format(method, params))
-        for n in xrange(self.maxAttempts):
-            try:
-                result = self._call_api_simple(method, params)
-                if result:
-                    return result
-                else:
-                    raise ValueError("Result is empty!")
-            except TooManyRequestsError as e:
-                logging.debug(e)
-                logging.debug("Sleeping for 1 second...")
+def call_api(method, params, args):
+    while True:
+        if isinstance(params, list):
+            params_list = [kv for kv in params]
+        elif isinstance(params, dict):
+            params_list = params.items()
+        else:
+            params_list = [params]
+        params_list.append(("access_token", args.token))
+        url = "https://api.vk.com/method/%s?%s" % (method, urlencode(params_list))
+
+        json_stuff = urllib2.urlopen(url).read()
+        result = json.loads(json_stuff)
+        if u'error' in result.keys():
+            if result[u'error'][u'error_code'] == 6:  # too many requests
+                logging.debug("Too many requests per second, sleeping..")
                 sleep(1)
-            except CaptchaError as e:
-                logging.debug(e)
-                key = self._captcha(e.imgUrl)
-                sid = e.sid
-                params.extend([("captcha_sid", sid), ("captcha_key", key)])
-            except Exception as e:
-                logging.debug(e)
-                logging.error("API request failed, {}/{} retries left".format(self.maxAttempts-(n+1), self.maxAttempts))
-        return None  # totally failed
-
-    def _call_api_simple(self, method, params):
-        paramsDict = dict(params)
-        paramsDict["access_token"] = self.token
-        paramsDict["v"] = Api.apiVersion
-        url = Api.urlTemplate.format(method)
-        response = requests.get(url, params=paramsDict)
-        assert response.status_code == 200
-        assert response.encoding == "utf-8"
-
-        data = response.json()
-        if data.get("error"):
-            logging.debug("Response with error: {}".format(str(data["error"])))
-            if data["error"]["error_code"] == 6:  # too many requests
-                raise TooManyRequestsError(data["error"])
-            elif data["error"]["error_code"] == 14:  # captcha needed
-                raise CaptchaError(data["error"])
+                continue
+            elif result[u'error'][u'error_code'] == 14:  # captcha needed :\
+                sid, key = captcha(result)
+                params.extend([(u"captcha_sid", sid), (u"captcha_key", key)])
+                continue
             else:
-                raise OtherError(data["error"])
+                msg = "API call resulted in error ({}): {}".format(result[u'error'][u'error_code'],
+                                                                   result[u'error'][u'error_msg'])
+                logging.error(msg)
+                raise RuntimeError(msg)
+        else:
+            logging.debug("API call succeeded: {}".format(url))
+            break
 
-        logging.debug("Api call succeeded")
-        return data["response"]
-
-    def _auth(self, appId):
-        """Interact with user to get access_token"""
-
-        url = Api.authUrlTemplate.format(appId, ",".join(Api.authPermissions))
-
-        print("Please open this url:\n\n\t{}\n".format(url))
-        raw_url = raw_input("Grant access to your account and copy resulting URL here: ")
-        res = re.search('access_token=([0-9A-Fa-f]+)', raw_url, re.I)
-        exp = re.search('expires_in=(\d+)', raw_url, re.I)
-
-        token = res.groups()[0] if res else None
-        if token is None:
-            return None, None
-
-        expiresInSeconds = int(exp.groups()[0])
-        now = datetime.datetime.now()
-        expirationDateTime = now + datetime.timedelta(seconds=expiresInSeconds)
-        logging.info("Token will expire in {}s - at {}".format(expiresInSeconds, expirationDateTime))
-
-        return token
-
-    def _captcha(self, imgUrl):
-        """Ask user to solve captcha"""
-        logging.debug("Captcha needed..")
-        print("VK thinks you're a bot - and you are ;)")
-        print("They want you to solve CAPTCHA. Please open this URL, and type here a captcha solution:")
-        print("\n\t{}\n".format(imgUrl))
-        solution = raw_input("Solution = ").strip()
-        return solution
-
-
-class Wall:
-
-    method = "wall.get"
-    maxCount = 100
-
-    @staticmethod
-    def process(api, download, start, end):
-        wall = Wall(api)
-        count = wall.getCount()
-        logging.info("Total wall posts: {}".format(count))
-        maxRange = min(count, end) if end != -1 else count
-        logging.info("Download range: {} - {}".format(start, maxRange))
-        posts = []
-        for offset in xrange(start, maxRange, Wall.maxCount):
-            posts += wall.getRange(offset, Wall.maxCount)
-
-        pprint(posts)
-
-
-    def __init__(self, api):
-        self.api = api
-
-    def getCount(self):
-        params = [
-            ("owner_id", self.api.id),
-            ("count", 1),
-            ("offset", 0)
-            ]
-        result = self.api.call_api(Wall.method, params)
-        return result["count"]
-
-    def getRange(self, offset, count):
-        params = [
-            ("owner_id", self.api.id),
-            ("count", count),
-            ("offset", offset),
-            ("extended", 1)  # returns profiles and other stuff for easier parsing
-            ]
-        response = self.api.call_api(Wall.method, params)
-        return [WallPost(rawPost) for rawPost in response["items"]]
-
-
-class Audio:
-    @staticmethod
-    def process(api, download, start, end):
-        logging.fatal("Not implemented")
-
-class Docs:
-    @staticmethod
-    def process(api, download, start, end):
-        logging.fatal("Not implemented")
-
-class Notes:
-    @staticmethod
-    def process(api, download, start, end):
-        logging.fatal("Not implemented")
-
-class Video:
-    @staticmethod
-    def process(api, download, start, end):
-        logging.fatal("Not implemented")
-
-class Messages:
-    @staticmethod
-    def process(api, download, start, end):
-        logging.fatal("Not implemented")
-
-class TooManyRequestsError(Exception):
-    def __init__(self, errorData):
-        self.errorData = errorData
-        self.message = errorData["error_msg"]
-    def __str__(self):
-        return self.message
-
-
-class CaptchaError(Exception):
-    def __init__(self, errorData):
-        self.errorData = errorData
-        self.message = errorData["error_msg"]
-        self.sid = errorData["captcha_sid"]
-        self.imgUrl = errorData["captcha_img"]
-    def __str__(self):
-        return self.message
-
-
-class OtherError(Exception):
-    def __init__(self, errorData):
-        self.errorData = errorData
-    def __str__(self):
-        return str(self.errorData)
+    if not u'response' in result.keys():
+        msg = "API call result has no response"
+        logging.error(msg)
+        raise RuntimeError(msg)
+    else:
+        #logging.debug("API call answer: {}".format(str(result[u'response'])))
+        return result[u'response'], json_stuff

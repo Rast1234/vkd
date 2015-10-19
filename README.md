@@ -19,7 +19,7 @@ VK dumper - save stuff from your vk.com to local drive
 * Download docs
     * Auto-change filename if exists
     * Write correct extension
-* **TODO:** Downloading video
+* **TODO:** Downloading video 
 * **TODO** Downloading notes
 
 **Known limitations, bugs and other considerations:**
@@ -33,7 +33,7 @@ VK dumper - save stuff from your vk.com to local drive
 
 Usage and requirements
 ---
-You need **Python 2.7** only for this to work. Should work under different OSes, not tested.
+You need **Python 2.7** only for this to work. Should work under different OSes, not tested.  
 For all available list of arguments see `--help` output.
 Essential options described below:
 * `-i / --id`    User ID or group ID to dump. Group ID should be prefixed with `-`, e.x. `-123456`
@@ -64,7 +64,7 @@ Results
 ---
 According to working mode and wall posts' contents, corresponding dirs and files will be created.
 Everything will be stored in specified directory, say, `some_dir`:
-
+   
       some_dir                                     (base directory)
       +---- 9876543                                (user id)
             +---- docs                             (documents stored here)
@@ -81,7 +81,7 @@ Everything will be stored in specified directory, say, `some_dir`:
             +---- post_1234                        (wall post id)
             |     +---- text.html                  (post text)
             |     +---- image.jpg                  (any multimedia attachments)
-            |     +---- music.mp3
+            |     +---- music.mp3                  
             |     +---- ...
             |     +---- media_urls.txt             (list of attachments' urls)
             |     +---- comments.json              (raw comments, reply from vk server)
@@ -93,51 +93,13 @@ Everything will be stored in specified directory, say, `some_dir`:
             |           +---- text.html            (all comments' text)
             |           +---- raw.json             (raw comments, reply from vk server)
             |           +---- image.jpg            (any multimedia attachments)
-            |           +---- music.mp3
+            |           +---- music.mp3                  
             |           +---- ...
             |           +---- media_urls.txt       (list of attachments' urls)
             +---- post_1235
             |     +---- ...
             +---- ...
-
-Configuration example
----
-{
-    "directory": ".",  // base directory to store downloaded data and logs, '.' for current directory
-    "ids": [],  // list of vk IDs. Positive number is user, negative number is community
-    "token": null,  // read documentation to obtain this. If null, using interactive auth mode
-    "appId": null,  // read documentation to obtain this
-    "simulate": false,  // do not download any content
-    "verbose": true,  // print more info to STDOUT
-    "targets": {  // content to download
-      "wall": {
-        "download": true,  // disable this to skip wall posts
-        "start": 0,  // begin from given post, starting from 0
-        "end": -1  // end at given post, -1 for no limit
-      },
-      "audio": {
-        "download": true,  // disable this to skip audios
-        "start": 0,
-        "end": -1
-      },
-      "video": {
-        "download": true,  // disable this to skip videos
-        "start": 0,
-        "end": -1
-      },
-      "notes": {
-        "download": true,  // disable this to skip notes
-        "start": 0,
-        "end": -1
-      },
-      "docs": {
-        "download": true,  // disable this to skip documents
-        "start": 0,
-        "end": -1
-      }
-    }
-}
-
+                        
 
 
 Bugs
@@ -147,8 +109,8 @@ Any bug reports, pul requests appreciated. Open an issue [here](https://github.c
 Credits:
 ---
 
-Me :)
-http://habrahabr.ru/post/143972/ (call_api function)
-http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python (fancy progressbar)
-Pavel Durov for great social network and its buggy API :)
-
+Me :)  
+http://habrahabr.ru/post/143972/ (call_api function)  
+http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python (fancy progressbar)  
+Pavel Durov for great social network and its buggy API :)  
+    

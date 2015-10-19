@@ -5,7 +5,7 @@ from os import path, makedirs
 import json
 #from ThreadedDownload import ThreadedDownload  # buggy like hell
 from Download import download
-from Api import Api
+from Api import call_api
 from collections import defaultdict
 import re
 
