@@ -1,5 +1,7 @@
 vkd (en)
 ===
+WARNING: it is dead, not supported and does not work. See https://github.com/Rast1234/VOffline instead.
+===
 
 VK dumper - save stuff from your vk.com to local drive
 ---
